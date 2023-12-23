@@ -114,6 +114,7 @@ $string['page:view:exclude.php:introduction'] = '<p>This page displays the confi
 Exclusions are either users or cohorts that are completely excluded from any automated processing.<br/>
 When a cohort is excluded, this means every user that\'s a member of the cohort will be excluded.
 Use the options on this page to add cohorts or users to the exclusion list.</p>';
+$string['page:view:statuslist.php:introduction:deleted'] = 'These users marked as deleted, their grades and data are not deleted yet, choose either to permanently delete them or restore.';
 $string['config:tool:disabled'] = 'Plugin functionality is disabled in global tool configuration';
 $string['config:smartdetect:disabled'] = 'Plugin option \'smart detection\' is disabled in global tool configuration';
 $string['config:fromfolder:disabled'] = 'Plugin option \'suspend from upload folder\' is disabled in global tool configuration';
@@ -141,6 +142,7 @@ $string['table:status:status'] = 'Actively monitored users';
 $string['table:status:suspended'] = 'Suspended users';
 $string['table:status:tosuspend'] = 'Users to suspend';
 $string['table:status:delete'] = 'Users to delete';
+$string['table:status:deleted'] = 'Marked as deleted users';
 $string['excludeuser'] = 'exclude user from processing';
 
 $string['email:user:suspend:subject'] = 'Your account has been suspended';

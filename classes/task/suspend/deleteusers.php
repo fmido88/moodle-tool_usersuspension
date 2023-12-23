@@ -53,15 +53,18 @@ class deleteusers extends \core\task\scheduled_task {
      * @return void
      */
     public function execute() {
+        $trace = new \text_progress_trace;
         if (!(bool)config::get('enabled')) {
             mtrace(get_string('config:tool:disabled', 'tool_usersuspension'));
             return;
         }
         if (!(bool)config::get('enablecleanup')) {
             mtrace(get_string('config:cleanup:disabled', 'tool_usersuspension'));
-            return false;
+            return;
         }
-        \tool_usersuspension\util::delete_suspended_users();
+        \tool_usersuspension\util::delete_suspended_users($trace);
+
+        $trace->finished();
     }
 
 }
