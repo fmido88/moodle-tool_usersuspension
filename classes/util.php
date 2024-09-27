@@ -164,29 +164,79 @@ class util {
     }
 
     /**
+     * Count the number of users that are deleted.
+     *
+     * @return int number of deleted users
+     */
+    public static function count_deleted_users() {
+        global $DB;
+        $params = ['deleted' => 1, 'atsign' => '%@%'];
+        $sql = 'SELECT COUNT(*) FROM {user} u WHERE u.deleted = :deleted AND u.email LIKE :atsign';
+        return $DB->count_records_sql($sql, $params);
+    }
+
+    /**
      * Marks inactive users as suspended according to configuration settings.
      *
-     * @return boolean
+     * @return boolean|void
      */
-    final public static function mark_users_to_suspend() {
-        global $DB;
+    final public static function mark_users_to_suspend(\text_progress_trace $trace) {
+        global $DB, $CFG;
         if (!(bool)config::get('enabled')) {
+            $trace->output('Not Enabled...');
             return false;
         }
         if (!(bool)config::get('enablesmartdetect')) {
+            $trace->output('Smart Detect Not Enabled...');
             return false;
         }
         $lastrun = static::get_lastrun_config('smartdetect', 0, false);
+
+        $trace->output('Last run: '. userdate($lastrun));
+
         $deltatime = time() - $lastrun;
-        if ($deltatime < config::get('smartdetect_interval')) {
+        $detectinterval = config::get('smartdetect_interval');
+        if ($deltatime < $detectinterval) {
+            $trace->output('Delay time: '.$deltatime. ' is less than ' . $detectinterval);
             return false;
         }
+        static::set_lastrun_config('smartdetect');
+
         list($where, $params) = static::get_suspension_query(true);
         $sql = "SELECT * FROM {user} u WHERE $where";
         $users = $DB->get_records_sql($sql, $params);
+        $trace->output(count($users) ." users has been detected...");
+        require_once("$CFG->dirroot/user/profile/lib.php");
+        $type = profile_get_custom_field_data_by_shortname('Type', false);
+        if (!empty($type) && is_object($type)) {
+            $checktype = true;
+        } else {
+            $checktype = false;
+        }
+
         foreach ($users as $user) {
+            if ($user->timemodified >= time() - $detectinterval) {
+                $trace->output('The user : '.$user->id. ' is modified before ' . $detectinterval);
+                continue;
+            }
+
+            if ($checktype) {
+                $field = profile_get_user_field($type->datatype, $type->id, $user->id);
+                if (!empty ($field->data) && strtolower($field->data) !== 'student') {
+                    $trace->output('The user : '.$user->id. ' is not a student ' . $field->data);
+                    if (!empty($user->lastaccess) && $user->lastaccess > time() - 45 * DAYSECS) {
+                        continue;
+                    } else if (empty($user->lastaccess) && $user->timecreated > time() - 30 * DAYSECS) {
+                        continue;
+                    }
+                }
+            }
             // Suspend user here.
-            static::do_suspend_user($user);
+            if (static::do_suspend_user($user, true, $trace)) {
+                $trace->output('The user '.$user->id. ' has been suspended...');
+            } else {
+                $trace->output('The user '.$user->id. ' Not suspended...');
+            }
         }
         return true;
     }
@@ -195,28 +245,35 @@ class util {
      * Warns inactive users that they will be suspended soon. This must be run *AFTER* user suspension is done,
      * or it will email suspended users if this is the first run.
      */
-    final public static function warn_users_of_suspension() {
+    final public static function warn_users_of_suspension(\text_progress_trace $trace) {
         global $DB;
 
         if (!(bool)config::get('enabled')) {
+            $trace->output('The plugin disabled...');
             return false;
         }
         if (!(bool)config::get('enablesmartdetect')) {
+            $trace->output('Smart detect disabled ...');
             return false;
         }
         if (!(bool)config::get('enablesmartdetect_warning')) {
+            $trace->output('Warning disabled...');
             return false;
         }
         // Run in parallel with the suspensions.
-        $lastrun = static::get_lastrun_config('smartdetect', 0, false);
+        $lastrun = static::get_lastrun_config('smartdetectwarn', 0, false);
+
         $deltatime = time() - $lastrun;
-        if ($deltatime < config::get('smartdetect_interval')) {
+        $interval = config::get('smartdetect_interval');
+        if ($deltatime < $interval) {
+            $trace->output("The last run delta time $deltatime is less than $interval ...");
             return false;
         }
-
+        static::set_lastrun_config('smartdetectwarn');
         // Do nothing if warningtime is 0.
         $warningtime = (int)config::get('smartdetect_warninginterval');
         if ($warningtime <= 0) {
+            $trace->output("Invalid warning interval $warningtime");
             return false;
         }
 
@@ -225,15 +282,21 @@ class util {
         list($where, $params) = static::get_suspension_query(true, $warningthreshold);
         $sql = "SELECT * FROM {user} u WHERE $where";
         $users = $DB->get_records_sql($sql, $params);
+        $trace->output("Found ".count($users)." to warn.");
         foreach ($users as $user) {
             // Check whether the user was already warned.
             if ((get_user_preferences('tool_usersuspension_warned', false, $user))) {
+                $trace->output("The user with id ". $user->id." Already warned");
                 continue;
             }
 
-            static::process_user_warning_email($user);
-            // Mark the user as warned. This will be reset on their first successful login post warning.
-            set_user_preference('tool_usersuspension_warned', true, $user);
+            if (static::process_user_warning_email($user)) {
+                $trace->output("Warning email has been sent to user with id ". $user->id);
+                // Mark the user as warned. This will be reset on their first successful login post warning.
+                set_user_preference('tool_usersuspension_warned', true, $user);
+            } else {
+                $trace->output("Error occurred while trying to send warning email to user with id ". $user->id);
+            }
         }
         return true;
     }
@@ -241,27 +304,37 @@ class util {
     /**
      * Deletes suspended users according to configuration settings.
      *
-     * @return boolean
+     * @return boolean|void
      */
-    final public static function delete_suspended_users() {
+    final public static function delete_suspended_users(\text_progress_trace $trace) {
         global $DB;
         if (!(bool)config::get('enabled')) {
+            $trace->output('No Enabled ...');
             return false;
         }
         if (!(bool)config::get('enablecleanup')) {
+            $trace->output('Cleanup not enabled....');
             return false;
         }
-        $lastrun = static::get_lastrun_config('cleanup', 0, true);
+        $lastrun = static::get_lastrun_config('cleanup', 0, false);
         $deltatime = time() - $lastrun;
         if ($deltatime < config::get('cleanup_interval')) {
+            $trace->output("Delay time: $deltatime is less than setting interval " . config::get('cleanup_interval'));
             return false;
         }
+        static::set_lastrun_config('cleanup');
+
         list($where, $params) = static::get_deletion_query(true);
         $sql = "SELECT * FROM {user} u WHERE $where";
         $users = $DB->get_records_sql($sql, $params);
+        $trace->output(count($users) . "Found to be deleted...");
         foreach ($users as $user) {
             // Delete user here.
-            static::do_delete_user($user);
+            if (static::do_delete_user($user)) {
+                $trace->output("The user ". $user->id ." has been marked as deleted ...");
+            } else {
+                $trace->output("The ". $user->id ." has not been deleted ...");
+            }
         }
     }
 
@@ -296,7 +369,7 @@ class util {
      * @param bool $automated true if a result of automated suspension, false if suspending
      *              is a result of a manual action
      */
-    final public static function do_suspend_user($user, $automated = true) {
+    final public static function do_suspend_user($user, $automated = true, \text_progress_trace $trace = null) {
         global $USER, $CFG;
         require_once($CFG->dirroot . '/user/lib.php');
         // Piece of code taken from /admin/user.php so we dance just like moodle does.
@@ -317,6 +390,7 @@ class util {
                         'context' => \context_user::instance($user->id),
                         'other' => [],
                 ]);
+
             $event->trigger();
             return true;
         }
@@ -362,10 +436,37 @@ class util {
      * @return bool true if successful, false otherwise
      */
     final public static function do_delete_user($user) {
-        global $USER, $CFG;
+        global $USER, $CFG, $DB;
         require_once($CFG->dirroot . '/user/lib.php');
         // Piece of code taken from /admin/user.php so we dance just like moodle does.
-        if (!is_siteadmin($user) && $USER->id != $user->id && $user->deleted != 1) {
+        if (!is_siteadmin($user) && $USER->id != $user->id && $user->deleted != 1 && !isguestuser($user)) {
+            // Force logout.
+            \core\session\manager::kill_user_sessions($user->id);
+            $DB->set_field('user', 'deleted', 1, ['id' => $user->id]);
+            // Process email id applicable.
+            $user->suspended = 0; // This is to prevent mail from not sending.
+            $emailsent = (static::process_user_deleted_email($user) === true);
+            // Create status record.
+            static::process_status_record($user, 'deleted', $emailsent);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Performs the actual user deletion
+     *
+     * @param \stdClass $user
+     * @return bool true if successful, false otherwise
+     */
+    final public static function do_permenant_delete_user($user) {
+        global $USER, $CFG, $DB;
+        require_once($CFG->dirroot . '/user/lib.php');
+        // Piece of code taken from /admin/user.php so we dance just like moodle does.
+        if (!is_siteadmin($user) && $USER->id != $user->id && !isguestuser($user)) {
+            if (!stristr($user->email, '@') && $user->deleted) {
+                return false;
+            }
             // Force logout.
             \core\session\manager::kill_user_sessions($user->id);
             user_delete_user($user);
@@ -471,8 +572,9 @@ class util {
         $where .= "AND (";
         $where .= "(u.lastaccess = 0 AND u.firstaccess > 0 AND u.firstaccess $detectoperator :{$uniqid}time1)";
         $where .= " OR (u.lastaccess > 0 AND u.lastaccess $detectoperator :{$uniqid}time2)";
-        $where .= " OR (u.auth = 'manual' AND u.firstaccess = 0 AND u.lastaccess = 0 ";
-        $where .= "     AND u.timemodified > 0 AND u.timemodified $detectoperator :{$uniqid}time3)";
+        $where .= " OR (u.auth = 'manual' AND u.firstaccess = 0 AND u.lastaccess = 0)";
+        $where .= " OR (u.firstaccess = 0 AND u.lastaccess = 0 AND u.timecreated < ".time() - 30 * DAYSECS;
+        $where .= " AND u.timemodified > 0 AND u.timemodified $detectoperator :{$uniqid}time3)";
         $where .= ")";
         $params = ["{$uniqid}mnethost" => $CFG->mnet_localhost_id,
             "{$uniqid}time1" => $timecheck,
@@ -500,10 +602,13 @@ class util {
         $uniqid = static::get_prefix();
         $params = [
             "{$uniqid}mnethost" => $CFG->mnet_localhost_id,
-            "{$uniqid}" => time() - (int)config::get('cleanup_deleteafter'),
+            "{$uniqid}timemodified" => time() - (int)config::get('cleanup_deleteafter'),
+            "{$uniqid}lastaccess" => time() - ((int)config::get('cleanup_deleteafter') + (int)config::get('smartdetect_suspendafter')),
         ];
         $where = "u.suspended = 1 AND u.confirmed = 1 AND u.deleted = 0 "
-                . "AND u.mnethostid = :{$uniqid}mnethost AND u.timemodified $detectoperator :{$uniqid}";
+                . "AND u.mnethostid = :{$uniqid}mnethost "
+                . "AND (u.timemodified $detectoperator :{$uniqid}timemodified "
+                . "OR u.lastaccess $detectoperator :{$uniqid}lastaccess)";
         static::append_user_exclusion($where, $params, 'u.');
         return [$where, $params];
     }
@@ -789,6 +894,8 @@ class util {
                 case statustable::STATUS:
                     $counter = ' (' . static::count_monitored_users() . ')';
                     break;
+                case statustable::DELETED:
+                    $counter = ' (' . static::count_deleted_users() . ')';
             }
             $tabs[] = static::pictabobject($type, 'status_' . $type, 'tool_usersuspension',
                     $url, get_string('table:status:' . $type, 'tool_usersuspension') . $counter);

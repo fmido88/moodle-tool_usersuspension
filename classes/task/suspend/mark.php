@@ -56,6 +56,7 @@ class mark extends \core\task\scheduled_task {
      * @return void
      */
     public function execute() {
+        $trace = new \text_progress_trace;
         if (!(bool)config::get('enabled')) {
             mtrace(get_string('config:tool:disabled', 'tool_usersuspension'));
             return;
@@ -64,14 +65,14 @@ class mark extends \core\task\scheduled_task {
             mtrace(get_string('config:smartdetect:disabled', 'tool_usersuspension'));
             return;
         }
-        $result = false;
-        $result = $result || \tool_usersuspension\util::mark_users_to_suspend();
-        // Now email any users in the warning period.
-        $result = $result || \tool_usersuspension\util::warn_users_of_suspension();
 
-        if ($result) {
-            \tool_usersuspension\util::set_lastrun_config('smartdetect');
-        }
+        \tool_usersuspension\util::mark_users_to_suspend($trace);
+        // Now email any users in the warning period.
+        $trace->output('Starting warning task...');
+        \tool_usersuspension\util::warn_users_of_suspension($trace);
+
+        $trace->finished();
+
     }
 
 }

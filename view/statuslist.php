@@ -79,6 +79,21 @@ if ($action === 'exclude') {
         $message = get_string('msg:user:unsuspend:failed', 'tool_usersuspension', $user);
     }
     redirect($thispageurl, $message, 5);
+} else if ($action == 'restore') {
+    require_sesskey();
+    require_capability('moodle/user:update', context_system::instance());
+    $id = required_param('id', PARAM_INT);
+    $DB->set_field('user', 'deleted', 0, ['id' => $id]);
+    $user = $DB->get_record('user', ['id' => $id]);
+    \tool_usersuspension\util::do_unsuspend_user($user);
+    redirect($thispageurl, '', 5);
+} else if ($action === 'permanentdelete') {
+    require_sesskey();
+    require_capability('moodle/user:update', context_system::instance());
+    $id = required_param('id', PARAM_INT);
+    $user = $DB->get_record('user', ['id' => $id]);
+    \tool_usersuspension\util::do_permenant_delete_user($user);
+    redirect($thispageurl, '', 5);
 } else {
     // Prepare specific filter fields and detect whether or not the current view is applicable.
     $viewtypeenabled = true;

@@ -60,6 +60,7 @@ class statustable extends \table_sql {
      */
     const DELETE = 'delete';
 
+    const DELETED = 'deleted';
     /**
      * Localised 'suspend user' string
      *
@@ -80,6 +81,17 @@ class statustable extends \table_sql {
      * @var string
      */
     protected $strexclude;
+
+    /**
+     * Localised 'deleted user' string
+     * @var string
+     */
+    protected $strpermanentdelete;
+    /**
+     * Localised 'deleted user' string
+     * @var string
+     */
+    protected $strrestore;
 
     /**
      * internal display type
@@ -140,6 +152,7 @@ class statustable extends \table_sql {
             self::SUSPENDED,
             self::TOSUSPEND,
             self::DELETE,
+            self::DELETED,
         ];
     }
 
@@ -172,6 +185,9 @@ class statustable extends \table_sql {
                 break;
             case self::DELETE:
                 $this->render_to_delete($pagesize, $useinitialsbar);
+                break;
+            case self::DELETED:
+                $this->render_deleted($pagesize, $useinitialsbar);
                 break;
             case self::SUSPENDED:
                 $this->render_suspended($pagesize, $useinitialsbar);
@@ -396,7 +412,64 @@ class statustable extends \table_sql {
         parent::set_sql($fields, '{user} u', $where, $params);
         $this->out($pagesize, $useinitialsbar);
     }
+    /**
+     * Display the status table for users that are to be deleted
+     * within the timeframe of deletion.
+     *
+     * @param int $pagesize
+     * @param bool $useinitialsbar
+     */
+    protected function render_deleted($pagesize, $useinitialsbar = true) {
+        global $DB;
+        $cols = array('username', 'name', 'timedetect', 'deletein');
+        $headers = array(
+            get_string('thead:username', 'tool_usersuspension'),
+            get_string('thead:name', 'tool_usersuspension'),
+            get_string('thead:timedetect', 'tool_usersuspension'),
+            get_string('thead:deletein', 'tool_usersuspension'));
 
+        if (!$this->is_downloading()) {
+            $cols[] = 'action';
+            $headers[] = get_string('thead:action', 'tool_usersuspension');
+        }
+
+        $this->define_columns($cols);
+        $this->define_headers($headers);
+
+        switch ($DB->get_dbfamily()) {
+            case 'mssql':
+                $sqlpartgreatest = 'IIF(u.lastaccess >= u.firstaccess, ' .
+                    'IIF(u.timemodified >= u.lastaccess, u.timemodified, u.lastaccess), u.firstaccess)';
+                break;
+            default:
+                $sqlpartgreatest = 'GREATEST(u.firstaccess, u.lastaccess, u.timemodified)';
+                break;
+        }
+
+        $deleteinsql = '('.config::get('cleanup_deleteafter') .
+                ' - (:now - u.timemodified)) AS deletein,';
+        $deleteonsql = '(' . $sqlpartgreatest . ' + ' .
+                config::get('cleanup_deleteafter') . ') as deleteon,';
+        $fields = 'u.id,u.username,' . $DB->sql_fullname('u.firstname', 'u.lastname') .
+                ' AS name,u.lastlogin,u.firstaccess,u.lastaccess,u.timemodified,u.suspended,u.deleted,'.
+                $sqlpartgreatest . ' AS timedetect,'.
+                $deleteinsql.
+                $deleteonsql.
+                'NULL as action';
+
+        $where = "u.deleted = :deleted AND u.email LIKE :at";
+        $params = ['now' => time(), 'deleted' => 1, 'at' => '%@%'];
+
+        // And apply filter(s).
+        list($fsqls, $fparams) = $this->userfiltering->get_sql_filter();
+        if (!empty($fsqls)) {
+            $where .= ' AND '. $fsqls;
+            $params = $params + $fparams;
+        }
+
+        parent::set_sql($fields, '{user} u', $where, $params);
+        $this->out($pagesize, $useinitialsbar);
+    }
     /**
      * Take the data returned from the db_query and go through all the rows
      * processing each col using either col_{columnname} method or other_cols
@@ -492,6 +565,12 @@ class statustable extends \table_sql {
             if ($row->suspended == 0 && ($this->displaytype == self::DELETE || $this->displaytype == self::TOSUSPEND)) {
                 $actions[] = $this->get_action($row, 'suspend');
             }
+            if ($this->displaytype == self::DELETED) {
+                // TODO add actions strings.
+                // TODO add actions icons.
+                $actions[] = $this->get_action($row, 'permanentdelete');
+                $actions[] = $this->get_action($row, 'restore');
+            }
         }
         if ($row->deleted != 1) {
             $actions[] = $this->get_action($row, 'exclude');
@@ -508,8 +587,9 @@ class statustable extends \table_sql {
     protected function get_action_image($action) {
         global $OUTPUT;
         $actionstr = 'str' . $action;
-        return '<img src="' . $OUTPUT->image_url($action, 'tool_usersuspension') .
-                '" title="' . $this->{$actionstr} . '"/>';
+        // return '<img src="' . $OUTPUT->image_url($action, 'tool_usersuspension') .
+        //         '" title="' . $this->{$actionstr} . '"/>';
+        return \html_writer::img($OUTPUT->image_url($action, 'tool_usersuspension'), $this->{$actionstr}, ['title' => $this->{$actionstr}, 'width' => '15px', 'height' => '15px']);
     }
 
     /**
@@ -521,6 +601,7 @@ class statustable extends \table_sql {
      */
     protected function get_action($row, $action) {
         $actionstr = 'str' . $action;
+
         return '<a href="' . new \moodle_url($this->baseurl, ['action' => $action,
             'id' => $row->id, 'sesskey' => sesskey(), 'type' => $this->displaytype]) .
                 '" alt="' . $this->{$actionstr} .
