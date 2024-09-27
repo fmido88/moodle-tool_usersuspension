@@ -23,20 +23,20 @@
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      R.J. van Dongen <rogier@sebsoft.nl>
+ * @author      RvD <helpdesk@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  **/
 defined('MOODLE_INTERNAL') || die;
 
 $plugin = new stdClass();
-$plugin->version   = 2022090102;
-$plugin->requires  = 2022041900;      // YYYYMMDDHH (This is the release version for Moodle 4.0).
+$plugin->version   = 2024092300;
+$plugin->requires  = 2024042200;      // YYYYMMDDHH (This is the release version for Moodle 4.4).
 $plugin->cron      = 0;
 $plugin->component = 'tool_usersuspension'; // Full name of the plugin (used for diagnostics).
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '4.0.1 (build 2022090102)';
-$plugin->dependencies = array();
+$plugin->release   = '4.0.3 (build 2024092300)';
+$plugin->dependencies = [];
 $plugin->supported = [
-    400,
-    410
+    404,
+    405,
 ];

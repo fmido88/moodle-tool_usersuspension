@@ -14,34 +14,48 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace tool_usersuspension;
+
+use core\session\utility\cookie_helper;
+use html_writer;
+
 /**
- * Capabilities for tool usersuspension
+ * Tasks performed by tool usersuspension
  *
- * File         access.php
+ * File         tasks.php
  * Encoding     UTF-8
  *
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
- **/
-defined('MOODLE_INTERNAL') || die;
+ * */
+class hook_callbacks {
 
-$capabilities = [
-    'tool/usersuspension:administration' => [
-        'captype' => 'view',
-        'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => [
-            'manager' => CAP_ALLOW,
-        ],
-    ],
-    'tool/usersuspension:viewstatus' => [
-        'captype' => 'view',
-        'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => [
-            'manager' => CAP_ALLOW,
-        ],
-    ],
-];
+    /**
+     * Callback to recover $SESSION->wantsurl.
+     *
+     * @param \core\hook\output\before_http_headers $hook
+     */
+    public static function before_http_headers(
+            \core\hook\output\before_http_headers $hook,
+    ): void {
+        global $SESSION;
+
+        if (!isloggedin() || isguestuser()) {
+            return;
+        }
+
+        if (!empty($SESSION->warncheck)) {
+            return;
+        }
+
+        if (get_user_preferences('tool_usersuspension_warned', false)) {
+            unset_user_preference('tool_usersuspension_warned');
+        }
+
+        $SESSION->warncheck = true;
+    }
+}
