@@ -23,56 +23,56 @@
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  * */
 defined('MOODLE_INTERNAL') || die;
 
-$tasks = [
-    [
+$tasks = array(
+    array(
         'classname' => 'tool_usersuspension\task\suspend\mark',
         'blocking'  => 0,
         'minute'    => '*/5',
         'hour'      => '*',
         'day'       => '*',
         'dayofweek' => '*',
-        'month'     => '*',
-    ],
-    [
+        'month'     => '*'
+    ),
+    array(
         'classname' => 'tool_usersuspension\task\suspend\fromfolder',
         'blocking'  => 0,
         'minute'    => '*/30',
         'hour'      => '*',
         'day'       => '*',
         'dayofweek' => '*',
-        'month'     => '*',
-    ],
-    [
+        'month'     => '*'
+    ),
+    array(
         'classname' => 'tool_usersuspension\task\unsuspend\fromfolder',
         'blocking'  => 0,
         'minute'    => '*/30',
         'hour'      => '*',
         'day'       => '*',
         'dayofweek' => '*',
-        'month'     => '*',
-    ],
-    [
+        'month'     => '*'
+    ),
+    array(
         'classname' => 'tool_usersuspension\task\suspend\deleteusers',
         'blocking'  => 0,
         'minute'    => '*/5',
         'hour'      => '*',
         'day'       => '*',
         'dayofweek' => '*',
-        'month'     => '*',
-    ],
-    [
+        'month'     => '*'
+    ),
+    array(
         'classname' => 'tool_usersuspension\task\logclean',
         'blocking'  => 0,
         'minute'    => '0',
         'hour'      => '*/6',
         'day'       => '*',
         'dayofweek' => '*',
-        'month'     => '*',
-    ],
-];
+        'month'     => '*'
+    ),
+);

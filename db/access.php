@@ -23,25 +23,25 @@
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  **/
 defined('MOODLE_INTERNAL') || die;
 
-$capabilities = [
-    'tool/usersuspension:administration' => [
+$capabilities = array(
+    'tool/usersuspension:administration' => array(
         'captype' => 'view',
         'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => [
+        'archetypes' => array(
             'manager' => CAP_ALLOW,
-        ],
-    ],
-    'tool/usersuspension:viewstatus' => [
+        )
+    ),
+    'tool/usersuspension:viewstatus' => array(
         'captype' => 'view',
         'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => [
+        'archetypes' => array(
             'manager' => CAP_ALLOW,
-        ],
-    ],
-];
+        )
+    ),
+);

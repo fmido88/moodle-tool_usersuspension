@@ -14,19 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace tool_usersuspension;
+use core\hook\output\before_http_headers;
 /**
- * Hook callbacks for User Suspension
+ * Class callbacks
  *
  * @package    tool_usersuspension
  * @copyright  2024 Mohammad Farouk <phun.for.physics@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+class callbacks {
+    public static function set_notice_preference(before_http_headers $hook) {
+        global $SESSION;
 
-defined('MOODLE_INTERNAL') || die();
-
-$callbacks = [
-    [
-        'hook' => core\hook\output\before_http_headers::class,
-        'callback' => tool_usersuspension\callbacks::class . '::set_notice_preference',
-    ],
-];
+        if (!isloggedin() || isguestuser()) {
+            return;
+        }
+    
+        if (!empty($SESSION->warncheck)) {
+            return;
+        }
+    
+        if (get_user_preferences('tool_usersuspension_warned', false)) {
+            unset_user_preference('tool_usersuspension_warned');
+        }
+    
+        $SESSION->warncheck = true;
+    }
+}

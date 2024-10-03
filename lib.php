@@ -15,34 +15,31 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Processor file for user exclusion overview and configuration
- *
- * File         notifications.php
- * Encoding     UTF-8
+ * Callback point for tool usersuspension
  *
  * @package     tool_usersuspension
- *
  * @copyright   Sebsoft.nl
  * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ **/
+
+/**
+ * Execute/inject code before sending HTTP headers.
  */
+function tool_usersuspension_before_http_headers() {
+    global $SESSION;
 
-require_once(dirname(__FILE__) . '/../../../../config.php');
-require_once($CFG->libdir.'/adminlib.php');
+    if (!isloggedin() || isguestuser()) {
+        return;
+    }
 
-admin_externalpage_setup('toolusersuspension');
-$context       = \context_system::instance();
+    if (!empty($SESSION->warncheck)) {
+        return;
+    }
 
-$thispageurl = new moodle_url('/' . $CFG->admin . '/tool/usersuspension/view/notifications.php', array());
+    if (get_user_preferences('tool_usersuspension_warned', false)) {
+        unset_user_preference('tool_usersuspension_warned');
+    }
 
-require_capability('tool/usersuspension:administration', $context);
-
-echo $OUTPUT->header();
-echo '<div class="tool-usersuspension-container">';
-echo '<div>';
-\tool_usersuspension\util::print_view_tabs(array(), 'notifications');
-echo '</div>';
-echo '<div>' . get_string('page:view:notifications.php:introduction', 'tool_usersuspension') . '</div>';
-echo \tool_usersuspension\util::generate_notifications();
-echo '</div>';
-echo $OUTPUT->footer();
+    $SESSION->warncheck = true;
+}

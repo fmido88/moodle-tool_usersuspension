@@ -19,9 +19,6 @@
  *
  * File         csv.php
  * Encoding     UTF-8
- *
- * @package     tool_usersuspension
- *
  * @copyright   Sebsoft.nl
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -34,7 +31,7 @@ namespace tool_usersuspension\processor;
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class csv {
@@ -280,7 +277,7 @@ class csv {
     protected function p_process_line($line) {
         if (count($line) === 1) {
             // Assumes email.
-            $line = ['email', $line[0]];
+            $line = array('email', $line[0]);
         }
         // Continue normal processing. Note that we CLEAN the params.
         $rs = false;
@@ -289,25 +286,25 @@ class csv {
             case 'email':
                 $email = clean_param(trim($line[1]), PARAM_EMAIL);
                 if ($this->mode == static::MODE_SUSPEND) {
-                    $rs = $this->p_suspend_user(['email' => $email]);
+                    $rs = $this->p_suspend_user(array('email' => $email));
                 } else {
-                    $rs = $this->p_unsuspend_user(['email' => $email]);
+                    $rs = $this->p_unsuspend_user(array('email' => $email));
                 }
                 break;
             case 'idnumber':
                 $idnumber = clean_param(trim($line[1]), PARAM_NOTAGS);
                 if ($this->mode == static::MODE_SUSPEND) {
-                    $rs = $this->p_suspend_user(['idnumber' => $idnumber]);
+                    $rs = $this->p_suspend_user(array('idnumber' => $idnumber));
                 } else {
-                    $rs = $this->p_unsuspend_user(['idnumber' => $idnumber]);
+                    $rs = $this->p_unsuspend_user(array('idnumber' => $idnumber));
                 }
                 break;
             case 'username':
                 $username = clean_param(trim($line[1]), PARAM_USERNAME);
                 if ($this->mode == static::MODE_SUSPEND) {
-                    $rs = $this->p_suspend_user(['username' => $username]);
+                    $rs = $this->p_suspend_user(array('username' => $username));
                 } else {
-                    $rs = $this->p_unsuspend_user(['username' => $username]);
+                    $rs = $this->p_unsuspend_user(array('username' => $username));
                 }
                 break;
             default:

@@ -19,9 +19,6 @@
  *
  * File         user.php
  * Encoding     UTF-8
- *
- * @package     tool_usersuspension
- *
  * @copyright   Sebsoft.nl
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -38,7 +35,7 @@ require_once($CFG->dirroot . '/user/selector/lib.php');
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class potential extends \user_selector_base {
@@ -82,10 +79,10 @@ class potential extends \user_selector_base {
         $availableusers = $DB->get_records_sql($fields . $sql . $order, array_merge($params, $sortparams));
 
         if (empty($availableusers)) {
-            return [];
+            return array();
         }
 
-        return [$availableusers];
+        return array($availableusers);
     }
 
     /**

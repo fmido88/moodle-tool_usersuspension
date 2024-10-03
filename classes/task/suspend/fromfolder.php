@@ -19,9 +19,6 @@
  *
  * File         fromfolder.php
  * Encoding     UTF-8
- *
- * @package     tool_usersuspension
- *
  * @copyright   Sebsoft.nl
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -40,7 +37,7 @@ require_once($CFG->libdir . '/csvlib.class.php');
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class fromfolder extends \core\task\scheduled_task {

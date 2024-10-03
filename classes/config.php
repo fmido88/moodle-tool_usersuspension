@@ -17,11 +17,8 @@
 /**
  * this file contains the tool config variables.
  *
- * File         config.php
+ * File         CONFIG.php
  * Encoding     UTF-8
- *
- * @package     tool_usersuspension
- *
  * @copyright   Sebsoft.nl
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -34,7 +31,7 @@ namespace tool_usersuspension;
  * @package     tool_usersuspension
  *
  * @copyright   Sebsoft.nl
- * @author      RvD <helpdesk@sebsoft.nl>
+ * @author      R.J. van Dongen <rogier@sebsoft.nl>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config {
@@ -84,11 +81,11 @@ class config {
      */
     public static function set($name, $value, $force = true) {
         self::init();
-        if (isset(self::$config->{$name}) || $force) {
-            self::$config->{$name} = $value;
+        if (isset(self::$config->$name) || $force) {
+            self::$config->$name = $value;
             set_config($name, $value, 'tool_usersuspension');
         }
-        return self::$config->{$name};
+        return self::$config->$name;
     }
 
     /**
